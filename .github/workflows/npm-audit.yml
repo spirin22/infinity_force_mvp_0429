@@ -1,0 +1,40 @@
+name: Max-Depth Dependency Audit
+
+on:
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        package_manager: [npm, yarn]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Ensure Yarn is available
+        if: matrix.package_manager == 'yarn'
+        run: corepack enable && corepack prepare yarn@stable --activate
+
+      - name: Install dependencies
+        run: |
+          if [ "${{ matrix.package_manager }}" = "npm" ]; then
+            npm ci
+          else
+            yarn install --frozen-lockfile
+          fi
+
+      - name: Run audit (most extensive)
+        run: |
+          if [ "${{ matrix.package_manager }}" = "npm" ]; then
+            npm audit --audit-level=low --production=false --json
+          else
+            yarn audit --level low
+          fi
